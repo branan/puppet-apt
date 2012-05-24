@@ -1,6 +1,7 @@
 require 'rake'
 require 'rspec/core/rake_task'
 require 'yaml'
+require 'module_integration'
 
 task :default => [:spec]
 
@@ -37,6 +38,20 @@ def fixtures(category)
   return result
 end
 
+def module_name
+  fixtures = YAML.load_file(".fixtures.yml")["fixtures"]
+
+  if not fixtures
+    abort("malformed fixtures.yml")
+  end
+
+  abort("no symlinks?") if ! fixtures.include? "symlinks"
+  fixtures["symlinks"].each do |k, v|
+    return k if v == '#{source_dir}'
+  end
+  abort("no symlink to source_dir, we can't determine our module name")
+end
+
 desc "Create the fixtures directory"
 task :spec_prep do
   fixtures("repositories").each do |repo, target|
@@ -63,6 +78,10 @@ task :spec_full do
   Rake::Task[:spec_prep].invoke
   Rake::Task[:spec].invoke
   Rake::Task[:spec_clean].invoke
+end
+
+task :integration do
+  ModuleIntegration.execute(module_name, source_dir)
 end
 
 desc "Build puppet module package"
